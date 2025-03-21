@@ -70,4 +70,3 @@ dependencies:
       - seaborn==0.11.0
       - statsmodels==0.12.1
       - threadpoolctl==3.5.0
-prefix: C:\Users\justi\anaconda3\envs\FS25_STAT
