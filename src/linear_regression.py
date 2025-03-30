@@ -29,7 +29,7 @@ def plot_residuals(axes, res, yfit, n_samp=0):
     axes = sns.residplot(x=yfit, y=res, data=dataframe,
     lowess=True, scatter_kws={'alpha': 0.5},
     line_kws={'color': 'red', 'lw': 1, 'alpha': 0.8})
-    axes.set_title('Residuals vs Fitted')
+    axes.set_title('Turkey-Anscombe: Residuals vs Fitted')
     axes.set_ylabel('Residuals')
     axes.set_xlabel('Fitted Values')
     
