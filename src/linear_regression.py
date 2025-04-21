@@ -93,7 +93,49 @@ def plot_scale_loc(axes, yfit, res_stand_sqrt, n_samp=0):
     axes.set_xlabel('Fitted Sales values')
     axes.set_ylabel('$\sqrt{\|Standardized\ Residuals\|}$')
     
-def get_residual_plots(fitted_model, fig):
+
+def plot_cooks(axes, res_inf_leverage, res_standard, x_lim=None, y_lim=None):
+    """ Inputs:
+    axes: axes created with matplotlib.pyplot
+    res_inf_leverage: Leverage
+    res_standard: standardized residuals
+    x_lim, y_lim[optional]: axis limits """
+
+    sns.regplot(x=res_inf_leverage, y=res_standard,
+                scatter=True, ci=False, lowess=True,
+                scatter_kws={'s': 40, 'alpha': 0.5},
+                line_kws={'color': 'red', 'lw': 1, 'alpha': 0.8})
+    # Set limits
+    if x_lim != None:
+        x_min, x_max = x_lim[0], x_lim[1]
+    else:
+        x_min, x_max = min(res_inf_leverage), max(res_inf_leverage)
+    if y_lim != None:
+        y_min, y_max = y_lim[0], y_lim[1]
+    else:
+        y_min, y_max = min(res_standard), max(res_standard)
+    # Plot centre line
+    plt.plot((x_min, x_max), (0, 0), 'g--', alpha=0.8)
+    # Plot contour lines for Cook's Distance levels
+    n = 100
+    cooks_distance = np.zeros((n, n))
+    x_cooks = np.linspace(x_min, x_max, n)
+    y_cooks = np.linspace(y_min, y_max, n)
+    for xi in range(n):
+        for yi in range(n):
+            cooks_distance[yi][xi] = \
+            y_cooks[yi]**2 * x_cooks[xi] / (2 * (1 - x_cooks[xi]))
+            
+    CS = axes.contour(x_cooks, y_cooks, cooks_distance, levels=4, alpha=0.6)
+    axes.clabel(CS, inline=0, fontsize=10)
+    axes.set_xlim(x_min, x_max)
+    axes.set_ylim(y_min, y_max)
+    axes.set_title('Residuals vs Leverage and Cook\'s distance')
+    axes.set_xlabel('Leverage')
+    axes.set_ylabel('Standardized Residuals')
+
+    
+def get_residual_plots(fitted_model, fig, resampling=True, num_samples=100, cooks=False, only_cooks=False):
     """ Summary: Get the residual plots for the fitted model     
     Args:
         fitted_model: fitted model from statsmodels
@@ -105,32 +147,51 @@ def get_residual_plots(fitted_model, fig):
     res_inf = fitted_model.get_influence() # Influence:
     res_standard = res_inf.resid_studentized_internal # Standardized residuals
     res_stand_sqrt = np.sqrt(np.abs(res_standard)) # # Absolute square root Residuals:): 
-
+    res_inf_leverage = res_inf.hat_matrix_diag
+    
+    if only_cooks == True:
+        ax1 = fig.add_subplot(1, 1, 1)
+        plot_cooks(ax1, res_inf_leverage, res_standard)
+        plt.tight_layout()
+        return fig
+    
+    if cooks == True: w = 4
+    else: w = 3
+    
+    if resampling == True: h = 2
+    else: h = 1
 
     # Residuals vs. Fitted values
-    ax1 = fig.add_subplot(2, 3, 1)
+    ax1 = fig.add_subplot(h, w, 1)
     plot_residuals(ax1, res, yfit)
 
     # QQ-plot
-    ax2 = fig.add_subplot(2, 3, 2)
+    ax2 = fig.add_subplot(h, w, 2)
     plot_QQ(ax2, res_standard)
 
     # Scale-location
-    ax3 = fig.add_subplot(2, 3, 3)
+    ax3 = fig.add_subplot(h, w, 3)
     plot_scale_loc(ax3, yfit, res_stand_sqrt)
 
-    # Residuals vs Fitted values with 100 resamples
-    ax4 = fig.add_subplot(2, 3, 4)
-    plot_residuals(ax4, res, yfit, n_samp = 100)
+    if cooks == True: 
+        ax4 = fig.add_subplot(h, w, 4)
+        plot_cooks(ax4, res_inf_leverage, res_standard)
 
-    # QQ Plot with 100 resamples
-    ax5 = fig.add_subplot(2, 3, 5)
-    plot_QQ(ax5, res_standard, n_samp = 100)
+    if resampling == True:
+        # Residuals vs Fitted values with 100 resamples
+        ax5 = fig.add_subplot(h, w, w+1)
+        plot_residuals(ax5, res, yfit, n_samp = num_samples)
 
-    # Scale-location with 100 resamples
-    ax6 = fig.add_subplot(2, 3, 6)
-    plot_scale_loc(ax6, yfit, res_stand_sqrt, n_samp = 100)
+        # QQ Plot with 100 resamples
+        ax6 = fig.add_subplot(h, w, w+2)
+        plot_QQ(ax6, res_standard, n_samp = num_samples)
+
+        # Scale-location with 100 resamples
+        ax7 = fig.add_subplot(h, w, w+3)
+        plot_scale_loc(ax7, yfit, res_stand_sqrt, n_samp = num_samples)
 
     # Show plot
     plt.tight_layout()
-    plt.show()
+    return fig
+
+
